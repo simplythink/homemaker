@@ -45,6 +45,8 @@
       data: null,
       newCleanSubtasks: [],
       dialogCallback: null,
+      editingInvId: null,
+      editingCleanId: null,
     },
 
     /* ========== Init ========== */
@@ -259,26 +261,17 @@
         }
 
         card.innerHTML =
-          '<div class="item-card-header">' +
-            '<div class="item-info">' +
-              '<span class="item-cat"><i class="fas ' + (cat ? cat.icon : 'fa-box') + '"></i> ' + (cat ? self.escapeHtml(cat.name) : '') + '</span>' +
-              '<div class="item-name">' + self.escapeHtml(item.name) + '</div>' +
-            '</div>' +
-            '<div class="item-card-actions">' +
-              '<button class="item-action-btn edit-btn" data-action="edit" title="編輯"><i class="fas fa-pen"></i></button>' +
-              '<button class="item-action-btn delete-btn" data-action="delete" title="刪除"><i class="fas fa-trash-alt"></i></button>' +
-            '</div>' +
+          '<button class="item-edit-corner" data-action="edit" title="編輯"><i class="fas fa-pen"></i></button>' +
+          '<span class="item-cat"><i class="fas ' + (cat ? cat.icon : 'fa-box') + '"></i> ' + (cat ? self.escapeHtml(cat.name) : '') + '</span>' +
+          '<div class="item-name">' + self.escapeHtml(item.name) + '</div>' +
+          '<div class="item-qty-row">' +
+            '<span class="item-qty-inline">' + item.quantity + ' ' + self.escapeHtml(item.unit) + '</span>' +
+            '<button class="item-consume-btn" data-action="consume" title="消耗"><i class="fas fa-minus"></i></button>' +
+            (isLow ? '<span class="low-badge">需補貨</span>' : '') +
           '</div>' +
           '<div class="item-details">' +
-            '<span class="item-qty-display">' + item.quantity + ' ' + item.unit + '</span>' +
-            (isLow ? '<span class="low-badge">需補貨</span>' : '') +
             (item.location ? '<span class="item-location"><i class="fas fa-map-marker-alt"></i> ' + self.escapeHtml(item.location) + '</span>' : '') +
             expiryHtml +
-          '</div>' +
-          '<div class="item-edit-row" style="display:none">' +
-            '<input type="number" min="0" data-field="qty" value="' + item.quantity + '" placeholder="數量" />' +
-            '<input type="text" data-field="loc" value="' + self.escapeHtml(item.location || '') + '" placeholder="位置" />' +
-            '<button class="btn-done" data-action="done"><i class="fas fa-check"></i> 完成</button>' +
           '</div>';
 
         list.appendChild(card);
@@ -304,48 +297,60 @@
       var self = this;
       var list = document.getElementById('inv-list');
 
-      list.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
-        btn.onclick = function () {
-          var card = btn.closest('.item-card');
-          var editRow = card.querySelector('.item-edit-row');
-          editRow.style.display = editRow.style.display === 'none' ? 'flex' : 'none';
-        };
-      });
-
-      list.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
+      list.querySelectorAll('[data-action="consume"]').forEach(function (btn) {
         btn.onclick = function () {
           var id = btn.closest('.item-card').dataset.id;
           var item = self.state.data.inventory.items.find(function (i) { return i.id === id; });
-          self.showDialog({
-            icon: 'fa-trash-alt',
-            iconType: 'danger',
-            title: '確認刪除？',
-            message: '確定要刪除「' + (item ? item.name : '') + '」嗎？此操作無法復原。',
-            confirmText: '刪除',
-            confirmType: 'danger',
-            onConfirm: function () {
-              self.state.data.inventory.items = self.state.data.inventory.items.filter(function (i) { return i.id !== id; });
-              self.persist();
-              self.showToast('已刪除', '品項已從庫存移除');
-            }
-          });
+          if (item && item.quantity > 0) {
+            item.quantity--;
+            item.updatedAt = new Date().toISOString();
+            self.persist();
+          }
         };
       });
 
-      list.querySelectorAll('[data-action="done"]').forEach(function (btn) {
+      list.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
         btn.onclick = function () {
-          var card = btn.closest('.item-card');
-          var id = card.dataset.id;
-          var item = self.state.data.inventory.items.find(function (i) { return i.id === id; });
-          if (item) {
-            item.quantity = +card.querySelector('[data-field="qty"]').value;
-            item.location = card.querySelector('[data-field="loc"]').value;
-            item.updatedAt = new Date().toISOString();
-          }
-          self.persist();
-          self.showToast('已更新', '品項資訊已儲存');
+          var id = btn.closest('.item-card').dataset.id;
+          self.openEditInventory(id);
         };
       });
+
+    },
+
+    openEditInventory: function (id) {
+      var item = this.state.data.inventory.items.find(function (i) { return i.id === id; });
+      if (!item) return;
+      this.state.editingInvId = id;
+      this.populateLocationDatalist();
+      document.getElementById('inv-name').value = item.name;
+      document.getElementById('inv-cat-select').value = item.categoryId || '';
+      document.getElementById('inv-qty').value = item.quantity;
+      document.getElementById('inv-unit').value = item.unit || '個';
+      document.getElementById('inv-loc').value = item.location || '';
+      document.getElementById('inv-min').value = item.minQuantity != null ? item.minQuantity : '';
+      document.getElementById('inv-expiry').value = item.expiryDate || '';
+      document.querySelector('#modal-inv .sheet-title').textContent = '編輯存貨';
+      document.getElementById('btn-inv-submit').textContent = '儲存';
+      document.getElementById('btn-inv-delete').style.display = 'block';
+      this.openModal('modal-inv');
+    },
+
+    openEditCleaning: function (id) {
+      var task = this.state.data.cleaning.tasks.find(function (t) { return t.id === id; });
+      if (!task) return;
+      this.state.editingCleanId = id;
+      this.state.newCleanSubtasks = task.subtasks ? task.subtasks.slice() : [];
+      document.getElementById('clean-name').value = task.name;
+      document.getElementById('clean-area').value = task.area || '';
+      document.getElementById('clean-freq').value = task.frequency || 'weekly';
+      document.getElementById('clean-custom-wrap').style.display = task.frequency === 'custom' ? 'block' : 'none';
+      if (task.customDays) document.getElementById('clean-custom-days').value = task.customDays;
+      document.getElementById('clean-subtask').value = '';
+      document.querySelector('#modal-clean .sheet-title').textContent = '編輯清潔任務';
+      document.getElementById('btn-clean-submit').textContent = '儲存';
+      this.renderCleanSubtaskList();
+      this.openModal('modal-clean');
     },
 
     renderCleaning: function () {
@@ -378,6 +383,7 @@
               (task.area ? '<div class="task-area"><i class="fas fa-map-marker-alt"></i> ' + self.escapeHtml(task.area) + '</div>' : '') +
             '</div>' +
             '<div class="task-card-actions">' +
+              '<button class="task-edit-btn" data-action="edit" title="編輯"><i class="fas fa-pen"></i></button>' +
               '<button class="task-complete-btn" data-action="complete" title="完成"><i class="fas fa-check"></i></button>' +
               '<button class="task-delete-btn" data-action="delete" title="刪除"><i class="fas fa-trash-alt"></i></button>' +
             '</div>' +
@@ -404,6 +410,13 @@
     bindCleaningActions: function () {
       var self = this;
       var list = document.getElementById('clean-list');
+
+      list.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+        btn.onclick = function () {
+          var id = btn.closest('.task-card').dataset.id;
+          self.openEditCleaning(id);
+        };
+      });
 
       list.querySelectorAll('[data-action="complete"]').forEach(function (btn) {
         btn.onclick = function () {
@@ -576,6 +589,7 @@
 
       /* Add Inventory */
       document.getElementById('btn-add-inv').onclick = function () {
+        self.state.editingInvId = null;
         self.populateLocationDatalist();
         document.getElementById('inv-name').value = '';
         document.getElementById('inv-cat-select').value = '';
@@ -584,6 +598,9 @@
         document.getElementById('inv-loc').value = '';
         document.getElementById('inv-min').value = '';
         document.getElementById('inv-expiry').value = '';
+        document.querySelector('#modal-inv .sheet-title').textContent = '新增存貨';
+        document.getElementById('btn-inv-submit').textContent = '新增';
+        document.getElementById('btn-inv-delete').style.display = 'none';
         self.openModal('modal-inv');
       };
 
@@ -594,8 +611,7 @@
         var catId = document.getElementById('inv-cat-select').value;
         if (!name || !catId) return;
 
-        self.state.data.inventory.items.push({
-          id: self.generateId(),
+        var itemData = {
           name: name,
           quantity: +document.getElementById('inv-qty').value || 1,
           unit: document.getElementById('inv-unit').value || '個',
@@ -604,21 +620,56 @@
           minQuantity: document.getElementById('inv-min').value ? +document.getElementById('inv-min').value : undefined,
           expiryDate: document.getElementById('inv-expiry').value || undefined,
           updatedAt: new Date().toISOString(),
-        });
+        };
 
+        if (self.state.editingInvId) {
+          var existing = self.state.data.inventory.items.find(function (i) { return i.id === self.state.editingInvId; });
+          if (existing) Object.assign(existing, itemData);
+          self.closeModal('modal-inv');
+          self.persist();
+          self.showToast('已更新', '「' + name + '」已儲存');
+        } else {
+          itemData.id = self.generateId();
+          self.state.data.inventory.items.push(itemData);
+          self.closeModal('modal-inv');
+          self.persist();
+          self.showToast('新增成功', '「' + name + '」已加入庫存');
+        }
+        self.state.editingInvId = null;
+      };
+
+      document.getElementById('btn-inv-delete').onclick = function () {
+        var id = self.state.editingInvId;
+        if (!id) return;
+        var item = self.state.data.inventory.items.find(function (i) { return i.id === id; });
         self.closeModal('modal-inv');
-        self.persist();
-        self.showToast('新增成功', '「' + name + '」已加入庫存');
+        self.showDialog({
+          icon: 'fa-trash-alt',
+          iconType: 'danger',
+          title: '確認刪除？',
+          message: '確定要刪除「' + (item ? item.name : '') + '」嗎？此操作無法復原。',
+          confirmText: '刪除',
+          confirmType: 'danger',
+          onConfirm: function () {
+            self.state.data.inventory.items = self.state.data.inventory.items.filter(function (i) { return i.id !== id; });
+            self.state.editingInvId = null;
+            self.persist();
+            self.showToast('已刪除', '品項已從庫存移除');
+          }
+        });
       };
 
       /* Add Cleaning */
       document.getElementById('btn-add-clean').onclick = function () {
+        self.state.editingCleanId = null;
         self.state.newCleanSubtasks = [];
         document.getElementById('clean-name').value = '';
         document.getElementById('clean-area').value = '';
         document.getElementById('clean-freq').value = 'weekly';
         document.getElementById('clean-subtask').value = '';
         document.getElementById('clean-custom-wrap').style.display = 'none';
+        document.querySelector('#modal-clean .sheet-title').textContent = '新增清潔任務';
+        document.getElementById('btn-clean-submit').textContent = '新增';
         self.renderCleanSubtaskList();
         self.openModal('modal-clean');
       };
@@ -652,19 +703,32 @@
         var freq = document.getElementById('clean-freq').value;
         var customDays = freq === 'custom' ? +document.getElementById('clean-custom-days').value : undefined;
 
-        self.state.data.cleaning.tasks.push({
-          id: self.generateId(),
+        var taskData = {
           name: name,
           frequency: freq,
           customDays: customDays,
           area: document.getElementById('clean-area').value.trim() || undefined,
           subtasks: self.state.newCleanSubtasks.length ? self.state.newCleanSubtasks.slice() : undefined,
           updatedAt: new Date().toISOString(),
-        });
+        };
 
-        self.closeModal('modal-clean');
-        self.persist();
-        self.showToast('新增成功', '「' + name + '」已加入清潔任務');
+        if (self.state.editingCleanId) {
+          var existing = self.state.data.cleaning.tasks.find(function (t) { return t.id === self.state.editingCleanId; });
+          if (existing) {
+            taskData.lastCompletedAt = existing.lastCompletedAt;
+            Object.assign(existing, taskData);
+          }
+          self.closeModal('modal-clean');
+          self.persist();
+          self.showToast('已更新', '「' + name + '」已儲存');
+        } else {
+          taskData.id = self.generateId();
+          self.state.data.cleaning.tasks.push(taskData);
+          self.closeModal('modal-clean');
+          self.persist();
+          self.showToast('新增成功', '「' + name + '」已加入清潔任務');
+        }
+        self.state.editingCleanId = null;
       };
 
       /* Dialog buttons */

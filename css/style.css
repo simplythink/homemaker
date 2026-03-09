@@ -2,23 +2,31 @@
 
 /* ========== Design Tokens ========== */
 :root {
-  --theme: #A67C52;
-  --theme-light: #C49B6E;
-  --theme-dark: #8C6B4A;
-  --theme-rgb: 166, 124, 82;
-  --app-bg: #F4F1EA;
+  /* --- 核心配色：低飽和莫蘭迪藍 --- */
+  --theme: #5A7D9A;           /* 主色：降低飽和度的灰藍 */
+  --theme-light: #85A1B8;     /* 淺色版：溫潤不刺眼 */
+  --theme-dark: #3F5B73;      /* 深色版 */
+  --theme-rgb: 90, 125, 154;  /* 用於透明度計算 */
+  
+  /* --- 背景與表面：搭配灰藍色調的冷灰底 --- */
+  --app-bg: #F0F2F5;          /* 稍微加深一點點背景，讓白色卡片更跳 */
   --card-bg: #ffffff;
-  --input-bg: #F9F8F6;
-  --text-primary: #595757;
-  --text-heading: #374151;
-  --text-heading-light: #4b5563;
-  --text-secondary: #9ca3af;
-  --text-disabled: #d1d5db;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  --input-bg: #F8FAFC;
+  
+  /* --- 文字層級 --- */
+  --text-primary: #475569;    /* 灰藍黑 */
+  --text-heading: #1E293B;    /* 深藍黑 */
+  --text-heading-light: #64748B;
+  --text-secondary: #94A3B8;
+  --text-disabled: #CBD5E1;
+  
+  /* --- 狀態色（微調飽和度以契合主色） --- */
+  --danger: #E26A6A;
+  --success: #76A68B;
+  --warning: #D9A05B;
+  --info: #7096B8;
 
+  /* --- 結構配置 --- */
   --radius-card: 24px;
   --radius-modal: 40px;
   --radius-btn: 16px;
@@ -28,11 +36,12 @@
   --radius-dialog: 24px;
   --radius-tag: 20px;
 
-  --shadow-card: 0 2px 12px rgba(0,0,0,0.04);
-  --shadow-btn: 0 4px 14px rgba(166, 124, 82, 0.3);
-  --shadow-modal: 0 -8px 40px rgba(0,0,0,0.08);
-  --shadow-dialog: 0 20px 60px rgba(0,0,0,0.15);
-  --shadow-pop: 0 20px 40px rgba(0,0,0,0.1);
+  /* --- 陰影優化：去掉發光感，改為柔和的環境陰影 --- */
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-btn: 0 4px 10px rgba(0, 0, 0, 0.08); /* 去掉顏色，改為自然的灰色陰影 */
+  --shadow-modal: 0 -8px 40px rgba(0, 0, 0, 0.06);
+  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.1);
+  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.08);
 
   --nav-padding-y: 18px;
   --app-max-width: 448px;
@@ -599,98 +608,118 @@ select.filter-pill {
 /* ========== Item Cards (Inventory) ========== */
 .item-list {
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
 }
 
 .item-card {
   background: var(--card-bg);
-  border-radius: var(--radius-card);
-  padding: 1.25rem;
+  border-radius: 18px;
+  padding: 0.9rem;
   box-shadow: var(--shadow-card);
   border: 1px solid rgba(var(--theme-rgb), 0.06);
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 .item-card.low-stock {
-  border-left: 4px solid var(--warning);
+  border-left: 3px solid var(--warning);
 }
 
-.item-card-header {
+.item-edit-corner {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 28px;
+  height: 28px;
+  background: var(--input-bg);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--theme);
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 1;
 }
 
-.item-info {
-  flex: 1;
-  min-width: 0;
+.item-edit-corner:active {
+  transform: scale(0.9);
+  background: rgba(var(--theme-rgb), 0.12);
 }
 
 .item-cat {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--theme);
   opacity: 0.6;
   letter-spacing: 0.05em;
   display: block;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .item-name {
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--text-heading-light);
   line-height: 1.3;
+  padding-right: 1.75rem;
 }
 
-.item-card-actions {
+.item-qty-row {
   display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
 }
 
-.item-action-btn {
-  width: 36px;
-  height: 36px;
-  background: var(--input-bg);
+.item-qty-inline {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--theme);
+  white-space: nowrap;
+}
+
+.item-consume-btn {
+  width: 26px;
+  height: 26px;
+  background: rgba(245, 158, 11, 0.08);
   border: none;
-  border-radius: var(--radius-chip);
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--warning);
   transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
 }
 
-.item-action-btn.edit-btn {
-  color: var(--theme);
-}
-
-.item-action-btn.delete-btn {
-  color: #fca5a5;
-}
-
-.item-action-btn:active {
-  transform: scale(0.92);
-  background: rgba(var(--theme-rgb), 0.1);
+.item-consume-btn:active {
+  transform: scale(0.9);
+  background: rgba(245, 158, 11, 0.18);
 }
 
 .item-details {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
 }
 
-.item-qty-display {
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  font-weight: 700;
+.item-details:empty {
+  display: none;
 }
 
 .low-badge {
@@ -703,23 +732,23 @@ select.filter-pill {
 }
 
 .item-location {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .item-location i {
-  font-size: 0.65rem;
+  font-size: 0.55rem;
 }
 
 .item-expiry {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .item-expiry.expiring-soon {
@@ -893,6 +922,27 @@ select.filter-pill {
   flex-shrink: 0;
 }
 
+.task-edit-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--input-bg);
+  border: none;
+  border-radius: var(--radius-chip);
+  color: var(--theme);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.task-edit-btn:active {
+  transform: scale(0.92);
+  background: rgba(var(--theme-rgb), 0.1);
+}
+
 .task-complete-btn {
   width: 40px;
   height: 40px;
@@ -945,7 +995,7 @@ select.filter-pill {
   gap: 0.5rem;
   width: 100%;
   padding: 0.9rem;
-  background: linear-gradient(135deg, var(--theme), var(--theme-light));
+  background: var(--theme);
   color: white;
   border: none;
   border-radius: 18px;
@@ -971,7 +1021,7 @@ select.filter-pill {
 /* Primary Button (in modals) */
 .btn-primary {
   padding: 0.8rem 1.25rem;
-  background: linear-gradient(135deg, var(--theme), var(--theme-light));
+  background: var(--theme);
   color: white;
   border: none;
   border-radius: var(--radius-btn);
@@ -1030,6 +1080,32 @@ select.filter-pill {
 .btn-danger:active {
   transform: scale(0.96);
   background: #fee2e2;
+}
+
+/* Danger Block Button (full-width in modals) */
+.btn-danger-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 1.25rem;
+  background: none;
+  color: var(--danger);
+  border: 1.5px dashed rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-btn);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-danger-block:active {
+  transform: scale(0.97);
+  background: #fef2f2;
 }
 
 /* ========== Forms & Inputs ========== */
